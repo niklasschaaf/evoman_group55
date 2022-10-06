@@ -527,13 +527,13 @@ for run in range(5):
 
     ##CODE FOR SAVING EXPERIMENT DATA
     # make directory
-    directory = "results/enemy"+str(enemies[:])
+    timestamp        = str(datetime.datetime.now())
+    directory = "results/"+timestamp+"enemy"+str(enemies[:])
     if not os.path.exists(directory):
         os.makedirs(directory+"/fitness/")
         os.makedirs(directory+"/solutions/")
 
     #experiment names
-    timestamp        = str(datetime.datetime.now())
     experiment_fit   =  directory+"/fitness/"+ str(run) +".csv"
     experiment_sol   =  directory+"/solutions/"+ str(run) +".csv"
 
