@@ -47,6 +47,7 @@ def initialize_population(population_size, genotype_size):
 
         #create new individual by initializing nparray of random values (-1;1) with size genotype_size
         individual = np.random.uniform(-1,1, genotype_size)
+        individual = np.append(individual, np.random.uniform(0, 1, 1))
 
         #add new individual to population
         population.append(individual)
@@ -100,7 +101,7 @@ def evaluate_population(population, enemies, hidden_neurons):
     #get fitness for each individual
     for i in population:
 
-        f,p,e,t = env.play(pcont=i)
+        f,p,e,t = env.play(pcont=i[0:-1]) # drop the mutation stepsize allele
 
         #add fitness value of i-th individual to fitness
         fitness.append(f)
@@ -149,6 +150,9 @@ def mutate_offspring(offspring, mutation_rate, sigma, mut_type):
 
         #go through all offspring
         for i in offspring:
+
+            if mut_step_self == "yes":
+                sigma = i[-1]
 
             #go through each value of the genotype
             for j in i:
@@ -455,21 +459,25 @@ def select_survivors(pop_gen, pop_fit, child_pop, child_fit, pop_size, sample_si
 hidden_neurons  = 10        #number of hidden neurons in the controller (DON'T CHANGE)
 total_weights   = (20+1)*hidden_neurons + (hidden_neurons+1)*5 #number ofweights in neural net (DON'T CHANGE)
 
-population_size = 10         #amount of solutions to evolve
-cross_rate      = 1       #rate (probability) at which crossover operator is used. if 1 always crossover, if 0 never crossover
+population_size = 20         #amount of solutions to evolve
+cross_rate      = 0.95       #rate (probability) at which crossover operator is used. if 1 always crossover, if 0 never crossover
 alpha           = 0.5        #constant used by crossover operators in combine_parents
 mutation_rate   = 1/total_weights       #rate (probability) at which mutations occur (mutate_offspring)
 #enemies         = [2]        #list of enemies solutions are evaluated against. max is [1,2,3,4,5,6,7,8]
-model_runtime   = 10       #number of generations the EA will run
-tournament_size = 6          #amount of tournaments done in select_parents and select_survivors
+model_runtime   = 20       #number of generations the EA will run
+tournament_size = 14         #amount of tournaments done in select_parents and select_survivors
 parent_n        = 6          #amount of parents in the tournament pool (can't be larger than populationsize)
 mut_type        = "uniform"  #type of mutation operator, can be uniform or nuniform
 cross_type      = "single"   #type of crossover operator, can be single, simple, whole or blend
 sigma           = 0.3        #standard deviation used by mutation operator nuniform eg. mutation step size
+mut_step_self   = "yes"     # self adapting mutation step size "yes" or anything
 
 
 #change these parameters for you experiment :)
 enemies         = [2,8]        #list of enemies solutions are evaluated against. max is [1,2,3,4,5,6,7,8]
+
+# set timestamp
+timestamp        = str(datetime.datetime.now())
 
 #run the entire EA 10 times
 for run in range(5):
@@ -527,8 +535,7 @@ for run in range(5):
 
     ##CODE FOR SAVING EXPERIMENT DATA
     # make directory
-    timestamp        = str(datetime.datetime.now())
-    directory = "results/"+timestamp+"enemy"+str(enemies[:])
+    directory = "results/enemy"+str(enemies[:])+timestamp
     if not os.path.exists(directory):
         os.makedirs(directory+"/fitness/")
         os.makedirs(directory+"/solutions/")
