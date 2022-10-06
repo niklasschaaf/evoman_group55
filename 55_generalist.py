@@ -473,16 +473,11 @@ enemies         = [2,8]        #list of enemies solutions are evaluated against.
 no_incest       = False      # True or False to activate incest prevention
 
 #run the entire EA 10 times
-for run in range(2):
+for run in range(5):
 
     ##CODE FOR RUNNING EXPERIMENTS
-
-    # global variables for incest prevention
-    global_index = 0
-    incest_fails = 0
-
     #initialize population
-    population, population_index, population_ancestors = initialize_population_no_incest(population_size, total_weights)
+    population = initialize_population(population_size, total_weights)
 
     #empty list for storing fitness data
     data       = []
