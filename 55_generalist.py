@@ -571,4 +571,3 @@ with open(experiment_par, 'w') as f:
     f.write("\nmut_type: " + str(mut_type))
     f.write("\ncross_type: " + str(cross_type))
     f.write("\nsigma: " + str(sigma))
-    f.write("\ntotal_number_individuals: "+ str(global_index))
