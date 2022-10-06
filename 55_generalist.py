@@ -458,7 +458,7 @@ total_weights   = (20+1)*hidden_neurons + (hidden_neurons+1)*5 #number ofweights
 population_size = 10         #amount of solutions to evolve
 cross_rate      = 1       #rate (probability) at which crossover operator is used. if 1 always crossover, if 0 never crossover
 alpha           = 0.5        #constant used by crossover operators in combine_parents
-mutation_rate   = 0/total_weights       #rate (probability) at which mutations occur (mutate_offspring)
+mutation_rate   = 1/total_weights       #rate (probability) at which mutations occur (mutate_offspring)
 #enemies         = [2]        #list of enemies solutions are evaluated against. max is [1,2,3,4,5,6,7,8]
 model_runtime   = 10       #number of generations the EA will run
 tournament_size = 6          #amount of tournaments done in select_parents and select_survivors
@@ -571,5 +571,4 @@ with open(experiment_par, 'w') as f:
     f.write("\nmut_type: " + str(mut_type))
     f.write("\ncross_type: " + str(cross_type))
     f.write("\nsigma: " + str(sigma))
-    f.write("\nno_incest: " + str(no_incest))
     f.write("\ntotal_number_individuals: "+ str(global_index))
