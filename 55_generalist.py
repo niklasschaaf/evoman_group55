@@ -470,7 +470,6 @@ sigma           = 0.3        #standard deviation used by mutation operator nunif
 
 #change these parameters for you experiment :)
 enemies         = [2,8]        #list of enemies solutions are evaluated against. max is [1,2,3,4,5,6,7,8]
-no_incest       = False      # True or False to activate incest prevention
 
 #run the entire EA 10 times
 for run in range(5):
@@ -528,7 +527,7 @@ for run in range(5):
 
     ##CODE FOR SAVING EXPERIMENT DATA
     # make directory
-    directory = "results/enemy"+str(enemies[:])+"no_incest"+str(no_incest)
+    directory = "results/enemy"+str(enemies[:])
     if not os.path.exists(directory):
         os.makedirs(directory+"/fitness/")
         os.makedirs(directory+"/solutions/")
@@ -573,5 +572,4 @@ with open(experiment_par, 'w') as f:
     f.write("\ncross_type: " + str(cross_type))
     f.write("\nsigma: " + str(sigma))
     f.write("\nno_incest: " + str(no_incest))
-    f.write("\nfailed_incest: " + str(incest_fails))
     f.write("\ntotal_number_individuals: "+ str(global_index))
