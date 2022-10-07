@@ -10,13 +10,19 @@ study = optuna.create_study(directions=["maximize", "maximize"], study_name=stud
 fig = optuna.visualization.plot_pareto_front(study, target_names=["average fitness gain", "maximum fitness gain"])
 fig.show()
 
-# doesn't work for some reason
-# fig = optuna.visualization.plot_optimization_history(study,  target=lambda t: t.values[0], target_name = "average fitness gain")
-# fig.show()
-
-fig = optuna.visualization.plot_intermediate_values(study)
+fig = optuna.visualization.plot_optimization_history(study,  target=lambda t: t.values[0], target_name = "average fitness gain")
 fig.show()
 
+fig = optuna.visualization.plot_optimization_history(study,  target=lambda t: t.values[1], target_name = "maximum fitness gain")
+fig.show()
+
+# doesn't work for some reason
+# fig = optuna.visualization.plot_intermediate_values(study)
+# fig.show()
+
 fig = optuna.visualization.plot_param_importances(study, target=lambda t: t.values[0], target_name = "average fitness gain")
+fig.show()
+
+fig = optuna.visualization.plot_param_importances(study, target=lambda t: t.values[1], target_name = "maximum fitness gain")
 fig.show()
 # more visualization options can be found on optuna.readthedocs.io
