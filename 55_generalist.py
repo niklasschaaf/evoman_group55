@@ -465,7 +465,8 @@ sigma           = 0.2        #standard deviation used by mutation operator nunif
 
 #change these parameters for you experiment :)
 enemies         = [2]        #list of enemies solutions are evaluated against. max is [1,2,3,4,5,6,7,8]
-mode = "tuning" # set to "tuning" for tuning anything else for normal run
+mode = "tuning" # set to "tuning" for tuning with optuna anything else for normal run
+trials = 10 # trials that optuna uses
 
 if mode == "tuning":
     # objective function for optimization with optuna
@@ -564,7 +565,7 @@ if mode == "tuning":
 
     study = optuna.create_study(directions=["maximize", "maximize"], study_name=study_name, storage=storage_name)
 
-    study.optimize(tuning, n_trials=20) # n_trial is the number of iterations for the optimization
+    study.optimize(tuning, n_trials=trials) # n_trial is the number of iterations for the optimization
 
     # some oputputs and plotting
     print(f"Number of trials on the Pareto front: {len(study.best_trials)}")
