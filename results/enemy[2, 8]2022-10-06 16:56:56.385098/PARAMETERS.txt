@@ -1,0 +1,13 @@
+population_size: 20
+hidden_neurons: 10
+total_weights: 265
+cross_rate: 0.95
+alpha: 0.5
+mutation_rate: 0.0037735849056603774
+tournament_size: 10
+enemies: [2, 8]
+model_runtime: 20
+parent_n: 15
+mut_type: uniform
+cross_type: single
+sigma: 0.3

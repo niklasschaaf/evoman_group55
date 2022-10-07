@@ -96,7 +96,7 @@ class Environment(object):
 
         # initializes pygame library
         pygame.init()
-        self.print_logs("MESSAGE: Pygame initialized for simulation.")
+        #self.print_logs("MESSAGE: Pygame initialized for simulation.")
 
         # initializes sound library for playing mode
         if self.sound == "on":
@@ -109,7 +109,7 @@ class Environment(object):
             self.joy = pygame.joystick.get_count()
 
         self.clock = pygame.time.Clock() # initializes game clock resource
-        
+
         if self.fullscreen:
             flags =  DOUBLEBUF  |  FULLSCREEN
         else:
@@ -497,7 +497,7 @@ class Environment(object):
 
             # returns results of the run
             def return_run():
-                self.print_logs("RUN: run status: enemy: "+str(self.enemyn)+"; fitness: " + str(fitness) + "; player life: " + str(self.player.life)  + "; enemy life: " + str(self.enemy.life) + "; time: " + str(self.time))
+                #self.print_logs("RUN: run status: enemy: "+str(self.enemyn)+"; fitness: " + str(fitness) + "; player life: " + str(self.player.life)  + "; enemy life: " + str(self.enemy.life) + "; time: " + str(self.time))
 
                 return  fitness, self.player.life, self.enemy.life, self.time
 
