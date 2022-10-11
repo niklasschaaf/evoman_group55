@@ -128,7 +128,7 @@ def evaluate_individuals(individual):
     with concurrent.futures.ProcessPoolExecutor() as executor:
         fitness_result = executor.map(return_fitness, individual)
 
-    fitness = np.array([i for i in fitness_result]) 
+    fitness = np.array([i for i in fitness_result])
 
     return fitness
 
@@ -500,6 +500,11 @@ cross_type      = "single"   #type of crossover operator, can be single, simple,
 sigma           = 0.2        #standard deviation used by mutation operator nuniform eg. mutation step size
 mut_step_self   = "yes"     # self adapting mutation step size "yes" or anything
 
+#change these parameters for you experiment :)
+enemies         = [2,5,8]        #list of enemies solutions are evaluated against. max is [1,2,3,4,5,6,7,8]
+mode = "tuning" # set to "tuning" for tuning with optuna anything else for normal run
+trials = 5 # trials that optuna uses
+
 #initialize environment globally so the evaluation function can be multiprocessed.
 #determine multiple or single mode
 if len(enemies) > 1:
@@ -523,11 +528,6 @@ env = Environment(experiment_name=experiment_name,
             level=2,
             enemies = enemies)
 
-#change these parameters for you experiment :)
-enemies         = [2]        #list of enemies solutions are evaluated against. max is [1,2,3,4,5,6,7,8]
-mode = "tnouning" # set to "tuning" for tuning with optuna anything else for normal run
-trials = 10 # trials that optuna uses
-
 #time counter for testing multiprocessing
 start = time.perf_counter()
 
@@ -541,11 +541,10 @@ if mode == "tuning":
 
         # # fixed experiment variables
         model_runtime   = 10       #number of generations the EA will run
-
+        mut_step_self   = "no"
 
         # initialize parameters to be optimized
-        cross_rate = trial.suggest_float('cross_rate', 0, 1)
-        mutation_rate = trial.suggest_float('mutation_rate', 0, 1)
+        # mutation_rate = trial.suggest_float('mutation_rate', 0, 1)
         sigma = trial.suggest_float('sigma', 0, 1)
         tournament_size = trial.suggest_int('tournament_size', 2, population_size)
         parent_n = 2 * trial.suggest_int('half_parent_n', 2, population_size // 2)
@@ -557,7 +556,7 @@ if mode == "tuning":
         max_fit_last = []
 
         #run the entire EA 3 times to achieve more robust results
-        for run in range(1):
+        for run in range(3):
 
             ##CODE FOR RUNNING EXPERIMENTS
             #initialize population
@@ -600,7 +599,7 @@ if mode == "tuning":
         avg_fit_gain = np.mean(avg_fit_last) - np.mean(avg_fit_first)
         max_fit_gain = np.mean(max_fit_last) - np.mean(max_fit_first)
 
-        return avg_fit_gain, max_fit_gain
+        return max_fit_gain #avg_fit_gain
 
     # run the optimization
     #fix_parameters = hidden_neurons, total_weights, population_size, alpha,\
@@ -618,27 +617,17 @@ if mode == "tuning":
     study_name = "tuning/optuna_"+str(timestamp)  # Unique identifier of the study.
     storage_name = "sqlite:///{}.db".format(study_name)
 
-    study = optuna.create_study(directions=["maximize", "maximize"], study_name=study_name, storage=storage_name)
+    sampler = optuna.samplers.CmaEsSampler() # define sampler
+
+    study = optuna.create_study(directions=["maximize"], sampler = sampler, study_name=study_name, storage=storage_name)
 
     study.optimize(tuning, n_trials=trials) # n_trial is the number of iterations for the optimization
 
-    # some oputputs and plotting
-    print(f"Number of trials on the Pareto front: {len(study.best_trials)}")
+    # plots
+    fig = plot_optimization_history(study)
+    fig.show()
 
-    trial_with_highest_avg = max(study.best_trials, key=lambda t: t.values[0])
-    print(f"Trial with highest average fitness gain: ")
-    print(f"\tnumber: {trial_with_highest_avg.number}")
-    print(f"\tparams: {trial_with_highest_avg.params}")
-    print(f"\tvalues: {trial_with_highest_avg.values}")
-
-    trial_with_highest_max = max(study.best_trials, key=lambda t: t.values[1])
-    print(f"Trial with highest maximium fitness gain: ")
-    print(f"\tnumber: {trial_with_highest_max.number}")
-    print(f"\tparams: {trial_with_highest_max.params}")
-    print(f"\tvalues: {trial_with_highest_max.values}")
-
-    # plot pareto front
-    fig = optuna.visualization.plot_pareto_front(study, target_names=["average fitness gain", "maximum fitness gain"])
+    fig = plot_contour(study)
     fig.show()
 
 else:
