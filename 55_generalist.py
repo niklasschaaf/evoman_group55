@@ -540,7 +540,7 @@ if __name__ == '__main__': # prtect code dor multiprocessing
             """
 
             # # fixed experiment variables
-            model_runtime   = 10       #number of generations the EA will run
+            model_runtime   = 100       #number of generations the EA will run
             mut_step_self   = "no"
 
             # initialize parameters to be optimized
@@ -614,13 +614,18 @@ if __name__ == '__main__': # prtect code dor multiprocessing
 
         # Add stream handler of stdout to show the messages
         optuna.logging.get_logger("optuna").addHandler(logging.StreamHandler(sys.stdout))
-        study_name = "tuning/optuna_"+str(timestamp)  # Unique identifier of the study.
+
+        # start a new optimization
+        # study_name = "tuning/optuna_"+str(timestamp)  # Unique identifier of the study.
+
+        # continue exisiting run
+        filename = "optuna_2022-10-11 14:10:33.007903" # without cross_rate, 5 iterations, [3,5,8]
+        study_name = "tuning/"+filename  # Unique identifier of the study.
+
         storage_name = "sqlite:///{}.db".format(study_name)
 
         sampler = optuna.samplers.CmaEsSampler() # define sampler
-
         study = optuna.create_study(directions=["maximize"], sampler = sampler, study_name=study_name, storage=storage_name)
-
         study.optimize(tuning, n_trials=trials) # n_trial is the number of iterations for the optimization
 
         # plots
