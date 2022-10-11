@@ -15,6 +15,7 @@ import datetime
 import optuna
 import logging
 import plotly
+import concurrent.futures
 
 sys.path.insert(0, 'evoman')
 from environment import Environment
@@ -24,6 +25,7 @@ if not os.path.exists(experiment_name):
     os.makedirs(experiment_name)
 from demo_controller import player_controller
 
+# mut_step_self   = "yes"     # self adapting mutation step size "yes" or anything
 def initialize_population(population_size, genotype_size):
     """
     Initializes population by creating a population_size amount of np arrays
@@ -48,6 +50,8 @@ def initialize_population(population_size, genotype_size):
 
         #create new individual by initializing nparray of random values (-1;1) with size genotype_size
         individual = np.random.uniform(-1,1, genotype_size)
+
+        #add a sigma to the genotype for seldadaptation.
         individual = np.append(individual, np.random.uniform(0, 1, 1))
 
         #add new individual to population
@@ -108,6 +112,32 @@ def evaluate_population(population, enemies, hidden_neurons):
 
     return fitness
 
+def evaluate_individuals(individual):
+    """
+    New function that returns a list of fitness values of a population same as 'evaluate_population'. Only the process is paralellized.
+    ----------
+    population : list
+        list of genotypes
+    Returns
+    -------
+    fitness :
+         a list of fitness values corresonding to the elements in population
+    """
+
+    #Multiprocess evaluation function
+    with concurrent.futures.ProcessPoolExecutor() as executor:
+        fitness_result = executor.map(return_fitness, individual)
+
+    fitness = np.array([i for i in fitness_result]) 
+
+    return fitness
+
+def return_fitness(individual):
+    #returns
+    f,p,e,t = env.play(pcont=individual[0:-1])
+
+    return f
+
 def mutate_offspring(offspring, mutation_rate, sigma, mut_type):
     """
     Generate variation in a population by randomly mutating values in the genotype of offspring
@@ -157,7 +187,6 @@ def mutate_offspring(offspring, mutation_rate, sigma, mut_type):
                 #change genotype value based on mutation_rate.
                 if random.uniform(0,1) <= mutation_rate:
                     j += random.gauss(0, sigma)
-
 
 
     return offspring
@@ -435,6 +464,15 @@ def select_survivors(pop_gen, pop_fit, child_pop, child_fit, pop_size, sample_si
 
         index_leastfit = sample[sample_fit.index(min(sample_fit))] # finds index of the least fit individual in sample
 
+        # if not purge_fit[index_leastfit] == min(sample_fit):
+        #     print("!!!!!ALARM!!!!!")
+
+
+        # test_fitness = return_fitness(purge_pop[index_leastfit])
+        # if not test_fitness == min(sample_fit):
+        #     print(str(test_fitness))
+        #     print(str(min(sample_fit)))
+
         purge_pop.pop(index_leastfit)
         purge_fit.pop(index_leastfit)
 
@@ -453,20 +491,45 @@ population_size = 10         #amount of solutions to evolve
 cross_rate      = 0.95       #rate (probability) at which crossover operator is used. if 1 always crossover, if 0 never crossover
 alpha           = 0.5        #constant used by crossover operators in combine_parents
 mutation_rate   = 1/total_weights       #rate (probability) at which mutations occur (mutate_offspring)
-#enemies         = [2]        #list of enemies solutions are evaluated against. max is [1,2,3,4,5,6,7,8]
-model_runtime   = 5       #number of generations the EA will run
-tournament_size = 20         #amount of tournaments done in select_parents and select_survivors
-parent_n        = 20          #amount of parents in the tournament pool (can't be larger than populationsize)
-mut_type        = "uniform"  #type of mutation operator, can be uniform or nuniform
+enemies         = [2]        #list of enemies solutions are evaluated against. max is [1,2,3,4,5,6,7,8]
+model_runtime   = 10       #number of generations the EA will run
+tournament_size = 5         #amount of tournaments done in select_parents and select_survivors
+parent_n        = 6          #amount of parents in the tournament pool (can't be larger than populationsize)
+mut_type        = "nuniform"  #type of mutation operator, can be uniform or nuniform
 cross_type      = "single"   #type of crossover operator, can be single, simple, whole or blend
 sigma           = 0.2        #standard deviation used by mutation operator nuniform eg. mutation step size
-#mut_step_self   = "yes"     # self adapting mutation step size "yes" or anything
+mut_step_self   = "yes"     # self adapting mutation step size "yes" or anything
 
+#initialize environment globally so the evaluation function can be multiprocessed.
+#determine multiple or single mode
+if len(enemies) > 1:
+    multiplemode = "yes"
+else:
+    multiplemode = "no"
+
+#empty list for keeping fitness values
+fitness = []
+
+#don't use visuals to make experiments faster
+os.environ["SDL_VIDEODRIVER"] = "dummy"
+
+#setup game environment
+env = Environment(experiment_name=experiment_name,
+            playermode="ai",
+            player_controller=player_controller(hidden_neurons),
+            multiplemode = multiplemode,
+            speed="fastest",
+            enemymode="static",
+            level=2,
+            enemies = enemies)
 
 #change these parameters for you experiment :)
 enemies         = [2]        #list of enemies solutions are evaluated against. max is [1,2,3,4,5,6,7,8]
-mode = "tuning" # set to "tuning" for tuning with optuna anything else for normal run
+mode = "tnouning" # set to "tuning" for tuning with optuna anything else for normal run
 trials = 10 # trials that optuna uses
+
+#time counter for testing multiprocessing
+start = time.perf_counter()
 
 if mode == "tuning":
     # objective function for optimization with optuna
@@ -475,19 +538,10 @@ if mode == "tuning":
         objective function that can be used by optuna to find the best parameter
         right now it optimizes for best fitness gain in average and maximum fitness
         """
-        # # load fix parameters
-        # hidden_neurons, total_weights, population_size, alpha, model_runtime,\
-        # mut_type, cross_type, enemies = fix_parameters
 
-        # fixed experiment variables
-        hidden_neurons  = 10        #number of hidden neurons in the controller (DON'T CHANGE)
-        total_weights   = (20+1)*hidden_neurons + (hidden_neurons+1)*5 #number ofweights in neural net (DON'T CHANGE)
-        population_size = 50         #amount of solutions to evolve
-        alpha           = 0.5        #constant used by crossover operators in combine_parents
-        enemies         = [2,5,8]        #list of enemies solutions are evaluated against. max is [1,2,3,4,5,6,7,8]
+        # # fixed experiment variables
         model_runtime   = 10       #number of generations the EA will run
-        mut_type        = "uniform"  #type of mutation operator, can be uniform or nuniform
-        cross_type      = "single"   #type of crossover operator, can be single, simple, whole or blend
+
 
         # initialize parameters to be optimized
         cross_rate = trial.suggest_float('cross_rate', 0, 1)
@@ -503,14 +557,15 @@ if mode == "tuning":
         max_fit_last = []
 
         #run the entire EA 3 times to achieve more robust results
-        for run in range(3):
+        for run in range(1):
 
             ##CODE FOR RUNNING EXPERIMENTS
             #initialize population
             population = initialize_population(population_size, total_weights)
 
             #determine fitness of entire population generation
-            fitness    = evaluate_population(population, enemies, hidden_neurons)
+            fitness    = evaluate_individuals(population)
+
             avg_fit_first.append(np.mean(fitness))
             max_fit_first.append(max(fitness))
 
@@ -531,7 +586,7 @@ if mode == "tuning":
 
                 #determine fitness of offspring
                 # print("determining fitness of offspring")
-                fitness_offspring = evaluate_population(offspring, enemies, hidden_neurons)
+                fitness_offspring = evaluate_individuals(offspring)
 
                 #select survivors
                 # print("select new population")
@@ -591,14 +646,14 @@ else:
     timestamp        = str(datetime.datetime.now())
 
     #run the entire EA 10 times
-    for run in range(5):
-
+    for run in range(1):
+        print("run: " + str(run))
         ##CODE FOR RUNNING EXPERIMENTS
         #initialize population
         population = initialize_population(population_size, total_weights)
 
-        #determine fitness of entire population each generation
-        fitness    = evaluate_population(population, enemies, hidden_neurons)
+        # #determine fitness of entire population each generation
+        # fitness    = evaluate_individuals(population)
 
         #empty list for storing fitness data
         data       = []
@@ -608,8 +663,9 @@ else:
         ##CODE FOR RUNNING EXPERIMENTS
         #main model loop
         for i in range(model_runtime):
-            print("model run: " + str(i) + "\n")
-
+            print("generation: " + str(i) + "\n")
+            #determine fitness of entire population each generation
+            fitness    = evaluate_individuals(population)
             #save fitness of current generation
             fitness_sorted = fitness
             fitness_sorted.sort()
@@ -631,7 +687,7 @@ else:
 
             #determine fitness of offspring
             # print("determining fitness of offspring")
-            fitness_offspring = evaluate_population(offspring, enemies, hidden_neurons)
+            fitness_offspring = evaluate_individuals(offspring)
 
             #select survivors
             # print("select new population")
@@ -689,3 +745,6 @@ else:
         f.write("\nmut_type: " + str(mut_type))
         f.write("\ncross_type: " + str(cross_type))
         f.write("\nsigma: " + str(sigma))
+
+#print time it took to run the program
+print(f'The program with multiprocessing took {round((time.perf_counter()-start),2)} seconds')
