@@ -502,7 +502,7 @@ mut_step_self   = "yes"     # self adapting mutation step size "yes" or anything
 
 #change these parameters for you experiment :)
 enemies         = [2,5,8]        #list of enemies solutions are evaluated against. max is [1,2,3,4,5,6,7,8]
-mode = "tuning" # set to "tuning" for tuning with optuna anything else for normal run
+mode = "notuning" # set to "tuning" for tuning with optuna anything else for normal run
 trials = 5 # trials that optuna uses
 
 #initialize environment globally so the evaluation function can be multiprocessed.
