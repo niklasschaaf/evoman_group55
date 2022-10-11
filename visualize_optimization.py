@@ -1,7 +1,8 @@
 import optuna
 import plotly
 
-filename = "optuna_2022-10-07 14:21:12.210606"
+# filename = "optuna_2022-10-07 14:21:12.210606" # with cross_rate, 3 iterations, [3,5,8]
+filename = "optuna_2022-10-08 22:11:19.520279" # without cross_rate, 5 iterations, [3,5,8]
 study_name = "tuning/"+filename  # Unique identifier of the study.
 storage_name = "sqlite:///{}.db".format(study_name)
 study = optuna.create_study(directions=["maximize", "maximize"], study_name=study_name, storage=storage_name, load_if_exists=True)
