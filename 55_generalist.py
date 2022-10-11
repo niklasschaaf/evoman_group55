@@ -487,14 +487,14 @@ def select_survivors(pop_gen, pop_fit, child_pop, child_fit, pop_size, sample_si
 hidden_neurons  = 10        #number of hidden neurons in the controller (DON'T CHANGE)
 total_weights   = (20+1)*hidden_neurons + (hidden_neurons+1)*5 #number ofweights in neural net (DON'T CHANGE)
 
-population_size = 10         #amount of solutions to evolve
+population_size = 50         #amount of solutions to evolve
 cross_rate      = 0.95       #rate (probability) at which crossover operator is used. if 1 always crossover, if 0 never crossover
 alpha           = 0.5        #constant used by crossover operators in combine_parents
 mutation_rate   = 1/total_weights       #rate (probability) at which mutations occur (mutate_offspring)
 enemies         = [2]        #list of enemies solutions are evaluated against. max is [1,2,3,4,5,6,7,8]
 model_runtime   = 10       #number of generations the EA will run
-tournament_size = 5         #amount of tournaments done in select_parents and select_survivors
-parent_n        = 6          #amount of parents in the tournament pool (can't be larger than populationsize)
+tournament_size = 20         #amount of tournaments done in select_parents and select_survivors
+parent_n        = 20         #amount of parents in the tournament pool (can't be larger than populationsize)
 mut_type        = "nuniform"  #type of mutation operator, can be uniform or nuniform
 cross_type      = "single"   #type of crossover operator, can be single, simple, whole or blend
 sigma           = 0.2        #standard deviation used by mutation operator nuniform eg. mutation step size
@@ -664,10 +664,13 @@ else:
         #main model loop
         for i in range(model_runtime):
             print("generation: " + str(i) + "\n")
+
+            # print("evaluate_individuals")
             #determine fitness of entire population each generation
             fitness    = evaluate_individuals(population)
+
             #save fitness of current generation
-            fitness_sorted = fitness
+            fitness_sorted = fitness.copy()
             fitness_sorted.sort()
 
             current_data = [i, fitness_sorted[0], np.mean(fitness_sorted), fitness_sorted[-1], np.std(fitness_sorted)]
@@ -694,7 +697,7 @@ else:
             population, fitness = select_survivors(population, fitness, offspring, fitness_offspring, population_size, tournament_size)
 
         # save the last generation as well
-        fitness_sorted = fitness
+        fitness_sorted = fitness.copy()
         fitness_sorted.sort()
 
         current_data = [model_runtime, fitness_sorted[0], np.mean(fitness_sorted), fitness_sorted[-1], np.std(fitness_sorted)]
