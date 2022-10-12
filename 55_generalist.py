@@ -123,6 +123,7 @@ def evaluate_individuals(individual):
     fitness :
          a list of fitness values corresonding to the elements in population
     """
+    fitness_result = []
 
     #Multiprocess evaluation function
     with concurrent.futures.ProcessPoolExecutor() as executor:
@@ -488,20 +489,19 @@ hidden_neurons  = 10        #number of hidden neurons in the controller (DON'T C
 total_weights   = (20+1)*hidden_neurons + (hidden_neurons+1)*5 #number ofweights in neural net (DON'T CHANGE)
 
 population_size = 50         #amount of solutions to evolve
-cross_rate      = 0.95       #rate (probability) at which crossover operator is used. if 1 always crossover, if 0 never crossover
+cross_rate      = 1       #rate (probability) at which crossover operator is used. if 1 always crossover, if 0 never crossover
 alpha           = 0.5        #constant used by crossover operators in combine_parents
 mutation_rate   = 0.72       #rate (probability) at which mutations occur (mutate_offspring)
-model_runtime   = 30          #number of generations the EA will run
+model_runtime   = 5          #number of generations the EA will run
 tournament_size = 3           #amount of tournaments done in select_parents and select_survivors
 parent_n        = 16          #amount of parents in the tournament pool (can't be larger than populationsize)
 mut_type        = "nuniform"  #type of mutation operator, can be uniform or nuniform
 cross_type      = "single"    #type of crossover operator, can be single, simple, whole or blend
 sigma           = 0.99        #standard deviation used by mutation operator nuniform eg. mutation step size
-mut_step_self   = "no"        # self adapting mutation step size "yes" or anything
 
 #change these parameters for you experiment :)
 enemies         = [1,3,7]        #list of enemies solutions are evaluated against. max is [1,2,3,4,5,6,7,8]
-mut_step_self   = "no"           # self adapting mutation step size "yes" or anything
+mut_step_self   = "no"        # self adapting mutation step size "yes" or anything
 
 
 mode = "n0tuning" # set to "tuning" for tuning with optuna anything else for normal run
@@ -532,47 +532,143 @@ env = Environment(experiment_name=experiment_name,
 
 #time counter for testing multiprocessing
 start = time.perf_counter()
+if __name__ == '__main__': # protect code for multiprocessing
+    if mode == "tuning":
+        # objective function for optimization with optuna
+        def tuning(trial):
+            """
+            objective function that can be used by optuna to find the best parameter
+            right now it optimizes for best fitness gain in average and maximum fitness
+            """
 
-if mode == "tuning":
-    # objective function for optimization with optuna
-    def tuning(trial):
-        """
-        objective function that can be used by optuna to find the best parameter
-        right now it optimizes for best fitness gain in average and maximum fitness
-        """
+            # # fixed experiment variables
+            model_runtime   = 10       #number of generations the EA will run
+            mut_step_self   = "no"
 
-        # # fixed experiment variables
-        model_runtime   = 10       #number of generations the EA will run
-        mut_step_self   = "no"
+            # initialize parameters to be optimized
+            # mutation_rate = trial.suggest_float('mutation_rate', 0, 1)
+            sigma = trial.suggest_float('sigma', 0, 1)
+            tournament_size = trial.suggest_int('tournament_size', 2, population_size)
+            # parent_n = 2 * trial.suggest_int('half_parent_n', 2, population_size // 2)
 
-        # initialize parameters to be optimized
-        # mutation_rate = trial.suggest_float('mutation_rate', 0, 1)
-        sigma = trial.suggest_float('sigma', 0, 1)
-        tournament_size = trial.suggest_int('tournament_size', 2, population_size)
-        parent_n = 2 * trial.suggest_int('half_parent_n', 2, population_size // 2)
+            # lists to calculate fitness gain
+            avg_fit_first = []
+            avg_fit_last = []
+            max_fit_first = []
+            max_fit_last = []
 
-        # lists to calculate fitness gain
-        avg_fit_first = []
-        avg_fit_last = []
-        max_fit_first = []
-        max_fit_last = []
+            #run the entire EA 3 times to achieve more robust results
+            for run in range(3):
 
-        #run the entire EA 3 times to achieve more robust results
-        for run in range(3):
+                ##CODE FOR RUNNING EXPERIMENTS
+                #initialize population
+                population = initialize_population(population_size, total_weights)
+
+                #determine fitness of entire population generation
+                fitness    = evaluate_individuals(population)
+
+                avg_fit_first.append(np.mean(fitness))
+                max_fit_first.append(max(fitness))
+
+                ##CODE FOR RUNNING EXPERIMENTS
+                #main model loop
+                for i in range(model_runtime):
+                    #determine parents (does not work as of yet)
+                    # print("parent selection")
+                    parents = select_parents(population, fitness, parent_n, tournament_size)
+
+                    #cross parents
+                    # print("crossover")
+                    offspring = combine_parents(parents, cross_rate, alpha, cross_type)
+
+                    #mutate offspring
+                    # print("making offspring")
+                    offspring = mutate_offspring(offspring, mutation_rate, sigma, mut_type)
+
+                    #determine fitness of offspring
+                    # print("determining fitness of offspring")
+                    fitness_offspring = evaluate_individuals(offspring)
+
+                    #select survivors
+                    # print("select new population")
+                    population, fitness = select_survivors(population, fitness, offspring, fitness_offspring, population_size, tournament_size)
+
+                # fitness of last generation to list
+                avg_fit_last.append(np.mean(fitness))
+                max_fit_last.append(max(fitness))
+
+            # calculate fitness gain
+            avg_fit_gain = np.mean(avg_fit_last) - np.mean(avg_fit_first)
+            max_fit_gain = np.mean(max_fit_last) - np.mean(max_fit_first)
+
+            return max_fit_gain #avg_fit_gain
+
+        # run the optimization
+        #fix_parameters = hidden_neurons, total_weights, population_size, alpha,\
+        #model_runtime, mut_type, cross_type, enemies
+
+        # set timestamp
+        timestamp        = str(datetime.datetime.now())
+        # make directory
+        directory = "tuning/"
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
+        # Add stream handler of stdout to show the messages
+        optuna.logging.get_logger("optuna").addHandler(logging.StreamHandler(sys.stdout))
+
+        # start a new optimization
+        study_name = "tuning/optuna_"+str(timestamp)  # Unique identifier of the study.
+
+        # # continue exisiting run
+        # filename = "optuna_2022-10-11 22:18:23.412403" # without cross_rate, 5 iterations, [3,5,8]
+        # study_name = "tuning/"+filename  # Unique identifier of the study.
+
+        storage_name = "sqlite:///{}.db".format(study_name)
+
+        sampler = optuna.samplers.CmaEsSampler() # define sampler
+        study = optuna.create_study(directions=["maximize"], sampler = sampler, study_name=study_name, storage=storage_name, load_if_exists=True)
+        study.optimize(tuning, n_trials=trials) # n_trial is the number of iterations for the optimization
+
+        # plots
+        fig = optuna.visualization.plot_optimization_history(study)
+        fig.show()
+
+        fig = optuna.visualization.plot_contour(study)
+        fig.show()
+
+    else:
+        # set timestamp
+        timestamp        = str(datetime.datetime.now())
+
+        #run the entire EA 10 times
+        for run in range(1):
+            print("run: " + str(run))
 
             ##CODE FOR RUNNING EXPERIMENTS
             #initialize population
             population = initialize_population(population_size, total_weights)
 
-            #determine fitness of entire population generation
+            # #determine fitness of initial population
             fitness    = evaluate_individuals(population)
 
-            avg_fit_first.append(np.mean(fitness))
-            max_fit_first.append(max(fitness))
+            #empty list for storing fitness data
+            data       = []
+            fields = ['Generation', 'Lowest', 'Mean', 'Highest', 'Stdev']
+            data.append(fields)
 
             ##CODE FOR RUNNING EXPERIMENTS
             #main model loop
             for i in range(model_runtime):
+                print("generation: " + str(i) + "\n")
+
+                #save fitness of current generation
+                fitness_sorted = fitness.copy()
+                fitness_sorted.sort()
+
+                current_data = [i, fitness_sorted[0], np.mean(fitness_sorted), fitness_sorted[-1], np.std(fitness_sorted)]
+                data.append(current_data)
+
                 #determine parents (does not work as of yet)
                 # print("parent selection")
                 parents = select_parents(population, fitness, parent_n, tournament_size)
@@ -593,148 +689,59 @@ if mode == "tuning":
                 # print("select new population")
                 population, fitness = select_survivors(population, fitness, offspring, fitness_offspring, population_size, tournament_size)
 
-            # fitness of last generation to list
-            avg_fit_last.append(np.mean(fitness))
-            max_fit_last.append(max(fitness))
 
-        # calculate fitness gain
-        avg_fit_gain = np.mean(avg_fit_last) - np.mean(avg_fit_first)
-        max_fit_gain = np.mean(max_fit_last) - np.mean(max_fit_first)
-
-        return max_fit_gain #avg_fit_gain
-
-    # run the optimization
-    #fix_parameters = hidden_neurons, total_weights, population_size, alpha,\
-    #model_runtime, mut_type, cross_type, enemies
-
-    # set timestamp
-    timestamp        = str(datetime.datetime.now())
-    # make directory
-    directory = "tuning/"
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-
-    # Add stream handler of stdout to show the messages
-    optuna.logging.get_logger("optuna").addHandler(logging.StreamHandler(sys.stdout))
-    study_name = "tuning/optuna_"+str(timestamp)  # Unique identifier of the study.
-    storage_name = "sqlite:///{}.db".format(study_name)
-
-    sampler = optuna.samplers.CmaEsSampler() # define sampler
-
-    study = optuna.create_study(directions=["maximize"], sampler = sampler, study_name=study_name, storage=storage_name)
-
-    study.optimize(tuning, n_trials=trials) # n_trial is the number of iterations for the optimization
-
-    # plots
-    fig = plot_optimization_history(study)
-    fig.show()
-
-    fig = plot_contour(study)
-    fig.show()
-
-else:
-    # set timestamp
-    timestamp        = str(datetime.datetime.now())
-
-    #run the entire EA 10 times
-    for run in range(10):
-        print("run: " + str(run))
-        ##CODE FOR RUNNING EXPERIMENTS
-        #initialize population
-        population = initialize_population(population_size, total_weights)
-
-        #determine fitness of entire population each generation
-        fitness    = evaluate_individuals(population)
-
-        #empty list for storing fitness data
-        data       = []
-        fields = ['Generation', 'Lowest', 'Mean', 'Highest', 'Stdev']
-        data.append(fields)
-
-        ##CODE FOR RUNNING EXPERIMENTS
-        #main model loop
-        for i in range(model_runtime):
-            print("generation: " + str(i) + "\n")
-
-            #save fitness of current generation
+            # save the last generation as well
             fitness_sorted = fitness.copy()
             fitness_sorted.sort()
 
-            current_data = [i, fitness_sorted[0], np.mean(fitness_sorted), fitness_sorted[-1], np.std(fitness_sorted)]
+            current_data = [model_runtime, fitness_sorted[0], np.mean(fitness_sorted), fitness_sorted[-1], np.std(fitness_sorted)]
             data.append(current_data)
 
-            #determine parents (does not work as of yet)
-            # print("parent selection")
-            parents = select_parents(population, fitness, parent_n, tournament_size)
+            ##CODE FOR SAVING EXPERIMENT DATA
+            # make directory
+            directory = "results/enemies"+str(enemies[:])+'SelfSigma_'+mut_step_self+'_'+timestamp
+            if not os.path.exists(directory):
+                os.makedirs(directory+"/fitness/")
+                os.makedirs(directory+"/solutions/")
 
-            #cross parents
-            # print("crossover")
-            offspring = combine_parents(parents, cross_rate, alpha, cross_type)
+            #experiment names
+            experiment_fit   =  directory+"/fitness/"+ str(run) +".csv"
+            experiment_sol   =  directory+"/solutions/"+ str(run) +".csv"
 
-            #mutate offspring
-            # print("making offspring")
-            offspring = mutate_offspring(offspring, mutation_rate, sigma, mut_type)
+            #sort solutions by fitness and pick best one
+            solutions        = zip(population,fitness)
+            solutions_sorted = sorted(solutions, key = lambda x: x[1])
+            solution_best    = solutions_sorted[-1][0]
 
-            #determine fitness of offspring
-            # print("determining fitness of offspring")
-            fitness_offspring = evaluate_individuals(offspring)
+            #save fitness values of each iteration
+            np.savetxt(experiment_fit,
+                       data,
+                       delimiter =", ",
+                       fmt ='% s')
 
-            #select survivors
-            # print("select new population")
-            population, fitness = select_survivors(population, fitness, offspring, fitness_offspring, population_size, tournament_size)
-
-        # save the last generation as well
-        fitness_sorted = fitness.copy()
-        fitness_sorted.sort()
-
-        current_data = [model_runtime, fitness_sorted[0], np.mean(fitness_sorted), fitness_sorted[-1], np.std(fitness_sorted)]
-        data.append(current_data)
-
-        ##CODE FOR SAVING EXPERIMENT DATA
-        # make directory
-        directory = "results/enemy"+str(enemies[:])+timestamp
-        if not os.path.exists(directory):
-            os.makedirs(directory+"/fitness/")
-            os.makedirs(directory+"/solutions/")
-
-        #experiment names
-        experiment_fit   =  directory+"/fitness/"+ str(run) +".csv"
-        experiment_sol   =  directory+"/solutions/"+ str(run) +".csv"
-
-        #sort solutions by fitness and pick best one
-        solutions        = zip(population,fitness)
-        solutions_sorted = sorted(solutions, key = lambda x: x[1])
-        solution_best    = solutions_sorted[-1][0]
-
-        #save fitness values of each iteration
-        np.savetxt(experiment_fit,
-                   data,
-                   delimiter =", ",
-                   fmt ='% s')
-
-        #save the solution with the highest fitness
-        np.savetxt(experiment_sol,
-                   solution_best,
-                   delimiter =", ",
-                   fmt ='% s')
+            #save the solution with the highest fitness
+            np.savetxt(experiment_sol,
+                       solution_best,
+                       delimiter =", ",
+                       fmt ='% s')
 
 
-    experiment_par   = directory+"/PARAMETERS.txt"
-    #save parameter settings
-    with open(experiment_par, 'w') as f:
-        f.write("population_size: " + str(population_size))
-        f.write("\nhidden_neurons: " + str(hidden_neurons))
-        f.write("\ntotal_weights: " + str(total_weights))
-        f.write("\ncross_rate: " + str(cross_rate))
-        f.write("\nalpha: " + str(alpha))
-        f.write("\nmutation_rate: " + str(mutation_rate))
-        f.write("\ntournament_size: " + str(tournament_size))
-        f.write("\nenemies: " + str(enemies))
-        f.write("\nmodel_runtime: " + str(model_runtime))
-        f.write("\nparent_n: " + str(parent_n))
-        f.write("\nmut_type: " + str(mut_type))
-        f.write("\ncross_type: " + str(cross_type))
-        f.write("\nsigma: " + str(sigma))
+        experiment_par   = directory+"/PARAMETERS.txt"
+        #save parameter settings
+        with open(experiment_par, 'w') as f:
+            f.write("population_size: " + str(population_size))
+            f.write("\nhidden_neurons: " + str(hidden_neurons))
+            f.write("\ntotal_weights: " + str(total_weights))
+            f.write("\ncross_rate: " + str(cross_rate))
+            f.write("\nalpha: " + str(alpha))
+            f.write("\nmutation_rate: " + str(mutation_rate))
+            f.write("\ntournament_size: " + str(tournament_size))
+            f.write("\nenemies: " + str(enemies))
+            f.write("\nmodel_runtime: " + str(model_runtime))
+            f.write("\nparent_n: " + str(parent_n))
+            f.write("\nmut_type: " + str(mut_type))
+            f.write("\ncross_type: " + str(cross_type))
+            f.write("\nsigma: " + str(sigma))
 
-#print time it took to run the program
-print(f'The program with multiprocessing took {round((time.perf_counter()-start),2)} seconds')
+    #print time it took to run the program
+    print(f'The program with multiprocessing took {round((time.perf_counter()-start),2)} seconds')
