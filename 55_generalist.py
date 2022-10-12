@@ -489,21 +489,21 @@ hidden_neurons  = 10        #number of hidden neurons in the controller (DON'T C
 total_weights   = (20+1)*hidden_neurons + (hidden_neurons+1)*5 #number ofweights in neural net (DON'T CHANGE)
 
 population_size = 50         #amount of solutions to evolve
-cross_rate      = 0.95       #rate (probability) at which crossover operator is used. if 1 always crossover, if 0 never crossover
+cross_rate      = 1       #rate (probability) at which crossover operator is used. if 1 always crossover, if 0 never crossover
 alpha           = 0.5        #constant used by crossover operators in combine_parents
-mutation_rate   = 1/total_weights       #rate (probability) at which mutations occur (mutate_offspring)
+mutation_rate   = 0.2   #1/total_weights       #rate (probability) at which mutations occur (mutate_offspring)
 model_runtime   = 30       #number of generations the EA will run
 tournament_size = 20         #amount of tournaments done in select_parents and select_survivors
-parent_n        = 20         #amount of parents in the tournament pool (can't be larger than populationsize)
+parent_n        = 40         #amount of parents in the tournament pool (can't be larger than populationsize)
 mut_type        = "nuniform"  #type of mutation operator, can be uniform or nuniform
 cross_type      = "single"   #type of crossover operator, can be single, simple, whole or blend
 sigma           = 0.2        #standard deviation used by mutation operator nuniform eg. mutation step size
 mut_step_self   = "yes"     # self adapting mutation step size "yes" or anything
 
 #change these parameters for you experiment :)
-enemies         = [2,5,8]        #list of enemies solutions are evaluated against. max is [1,2,3,4,5,6,7,8]
-mode = "notuning" # set to "tuning" for tuning with optuna anything else for normal run
-trials = 5 # trials that optuna uses
+enemies         = [1,3,7]        #list of enemies solutions are evaluated against. max is [1,2,3,4,5,6,7,8]
+mode = "tuning" # set to "tuning" for tuning with optuna anything else for normal run
+trials = 300 # trials that optuna uses
 
 #initialize environment globally so the evaluation function can be multiprocessed.
 #determine multiple or single mode
@@ -540,14 +540,14 @@ if __name__ == '__main__': # prtect code dor multiprocessing
             """
 
             # # fixed experiment variables
-            model_runtime   = 100       #number of generations the EA will run
+            model_runtime   = 10       #number of generations the EA will run
             mut_step_self   = "no"
 
             # initialize parameters to be optimized
             # mutation_rate = trial.suggest_float('mutation_rate', 0, 1)
             sigma = trial.suggest_float('sigma', 0, 1)
             tournament_size = trial.suggest_int('tournament_size', 2, population_size)
-            parent_n = 2 * trial.suggest_int('half_parent_n', 2, population_size // 2)
+            # parent_n = 2 * trial.suggest_int('half_parent_n', 2, population_size // 2)
 
             # lists to calculate fitness gain
             avg_fit_first = []
@@ -616,11 +616,11 @@ if __name__ == '__main__': # prtect code dor multiprocessing
         optuna.logging.get_logger("optuna").addHandler(logging.StreamHandler(sys.stdout))
 
         # start a new optimization
-        # study_name = "tuning/optuna_"+str(timestamp)  # Unique identifier of the study.
+        study_name = "tuning/optuna_"+str(timestamp)  # Unique identifier of the study.
 
-        # continue exisiting run
-        filename = "optuna_2022-10-11 14:10:33.007903" # without cross_rate, 5 iterations, [3,5,8]
-        study_name = "tuning/"+filename  # Unique identifier of the study.
+        # # continue exisiting run
+        # filename = "optuna_2022-10-11 22:18:23.412403" # without cross_rate, 5 iterations, [3,5,8]
+        # study_name = "tuning/"+filename  # Unique identifier of the study.
 
         storage_name = "sqlite:///{}.db".format(study_name)
 
@@ -699,7 +699,7 @@ if __name__ == '__main__': # prtect code dor multiprocessing
 
             ##CODE FOR SAVING EXPERIMENT DATA
             # make directory
-            directory = "results/enemy"+str(enemies[:])+timestamp
+            directory = "results/enemies"+str(enemies[:])+'SelfSigma_'+mut_step_self+'_'+timestamp
             if not os.path.exists(directory):
                 os.makedirs(directory+"/fitness/")
                 os.makedirs(directory+"/solutions/")

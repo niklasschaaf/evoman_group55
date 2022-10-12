@@ -1,8 +1,7 @@
 import optuna
 import plotly
 
-# filename = "optuna_2022-10-07 14:21:12.210606" # with cross_rate, 3 iterations, [3,5,8]
-filename = "optuna_2022-10-11 14:10:33.007903" # without cross_rate, 5 iterations, [3,5,8]
+filename = "optuna_2022-10-12 08:14:06.400095"
 study_name = "tuning/"+filename  # Unique identifier of the study.
 storage_name = "sqlite:///{}.db".format(study_name)
 study = optuna.create_study(directions=["maximize"], study_name=study_name, storage=storage_name, load_if_exists=True)
@@ -13,6 +12,9 @@ fig.show()
 fig = optuna.visualization.plot_contour(study)
 fig.show()
 
+print(study.best_params)
+
+#print(study.best_params)
 # # plot pareto front
 # fig = optuna.visualization.plot_pareto_front(study, target_names=["average fitness gain", "maximum fitness gain"])
 # fig.show()
