@@ -642,7 +642,7 @@ if __name__ == '__main__': # protect code for multiprocessing
         timestamp        = str(datetime.datetime.now())
 
         #run the entire EA 10 times
-        for run in range(1):
+        for run in range(10):
             print("run: " + str(run))
 
             ##CODE FOR RUNNING EXPERIMENTS
