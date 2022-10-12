@@ -490,19 +490,21 @@ total_weights   = (20+1)*hidden_neurons + (hidden_neurons+1)*5 #number ofweights
 population_size = 50         #amount of solutions to evolve
 cross_rate      = 0.95       #rate (probability) at which crossover operator is used. if 1 always crossover, if 0 never crossover
 alpha           = 0.5        #constant used by crossover operators in combine_parents
-mutation_rate   = 1/total_weights       #rate (probability) at which mutations occur (mutate_offspring)
-enemies         = [2,5,8]        #list of enemies solutions are evaluated against. max is [1,2,3,4,5,6,7,8]
-model_runtime   = 10       #number of generations the EA will run
-tournament_size = 20         #amount of tournaments done in select_parents and select_survivors
-parent_n        = 20         #amount of parents in the tournament pool (can't be larger than populationsize)
+mutation_rate   = 0.72       #rate (probability) at which mutations occur (mutate_offspring)
+model_runtime   = 30          #number of generations the EA will run
+tournament_size = 3           #amount of tournaments done in select_parents and select_survivors
+parent_n        = 16          #amount of parents in the tournament pool (can't be larger than populationsize)
 mut_type        = "nuniform"  #type of mutation operator, can be uniform or nuniform
-cross_type      = "single"   #type of crossover operator, can be single, simple, whole or blend
-sigma           = 0.2        #standard deviation used by mutation operator nuniform eg. mutation step size
-mut_step_self   = "yes"     # self adapting mutation step size "yes" or anything
+cross_type      = "single"    #type of crossover operator, can be single, simple, whole or blend
+sigma           = 0.99        #standard deviation used by mutation operator nuniform eg. mutation step size
+mut_step_self   = "no"        # self adapting mutation step size "yes" or anything
 
 #change these parameters for you experiment :)
-enemies         = [2,5,8]        #list of enemies solutions are evaluated against. max is [1,2,3,4,5,6,7,8]
-mode = "tuning" # set to "tuning" for tuning with optuna anything else for normal run
+enemies         = [1,3,7]        #list of enemies solutions are evaluated against. max is [1,2,3,4,5,6,7,8]
+mut_step_self   = "no"           # self adapting mutation step size "yes" or anything
+
+
+mode = "n0tuning" # set to "tuning" for tuning with optuna anything else for normal run
 trials = 5 # trials that optuna uses
 
 #initialize environment globally so the evaluation function can be multiprocessed.
@@ -635,14 +637,14 @@ else:
     timestamp        = str(datetime.datetime.now())
 
     #run the entire EA 10 times
-    for run in range(1):
+    for run in range(10):
         print("run: " + str(run))
         ##CODE FOR RUNNING EXPERIMENTS
         #initialize population
         population = initialize_population(population_size, total_weights)
 
-        # #determine fitness of entire population each generation
-        # fitness    = evaluate_individuals(population)
+        #determine fitness of entire population each generation
+        fitness    = evaluate_individuals(population)
 
         #empty list for storing fitness data
         data       = []
@@ -653,10 +655,6 @@ else:
         #main model loop
         for i in range(model_runtime):
             print("generation: " + str(i) + "\n")
-
-            # print("evaluate_individuals")
-            #determine fitness of entire population each generation
-            fitness    = evaluate_individuals(population)
 
             #save fitness of current generation
             fitness_sorted = fitness.copy()
