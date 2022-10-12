@@ -181,6 +181,10 @@ def mutate_offspring(offspring, mutation_rate, sigma, mut_type):
 
             if mut_step_self == "yes":
                 sigma = i[-1]
+                if sigma <= 0:
+                    sigma = 0
+                if sigma >= 1:
+                    sigma = 1
 
             #go through each value of the genotype
             for j in i:
@@ -488,13 +492,13 @@ def select_survivors(pop_gen, pop_fit, child_pop, child_fit, pop_size, sample_si
 hidden_neurons  = 10        #number of hidden neurons in the controller (DON'T CHANGE)
 total_weights   = (20+1)*hidden_neurons + (hidden_neurons+1)*5 #number ofweights in neural net (DON'T CHANGE)
 
-population_size = 50         #amount of solutions to evolve
+population_size = 100         #amount of solutions to evolve
 cross_rate      = 1       #rate (probability) at which crossover operator is used. if 1 always crossover, if 0 never crossover
 alpha           = 0.5        #constant used by crossover operators in combine_parents
 mutation_rate   = 0.2   #1/total_weights       #rate (probability) at which mutations occur (mutate_offspring)
 model_runtime   = 30       #number of generations the EA will run
 tournament_size = 20         #amount of tournaments done in select_parents and select_survivors
-parent_n        = 40         #amount of parents in the tournament pool (can't be larger than populationsize)
+parent_n        = 80         #amount of parents in the tournament pool (can't be larger than populationsize)
 mut_type        = "nuniform"  #type of mutation operator, can be uniform or nuniform
 cross_type      = "single"   #type of crossover operator, can be single, simple, whole or blend
 sigma           = 0.2        #standard deviation used by mutation operator nuniform eg. mutation step size
